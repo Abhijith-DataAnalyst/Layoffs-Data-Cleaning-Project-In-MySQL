@@ -1,0 +1,216 @@
+select * from layoffs;
+use world_layoffs;                    -- selecting the database
+create table layoffs_staging          -- Creating tables
+LIKE layoffs;
+
+select * from layoffs_staging;        -- Selecting the table
+
+insert layoffs_staging 
+select * from layoffs;                  -- inserting data's into layoffs_staging from layoffs
+
+select *,
+row_number() over(
+PARTITION BY company,location,total_laid_off,percentage_laid_off, 'date') AS row_num
+ from layoffs_staging;
+
+WITH duplicate_cte AS
+(
+select *,
+row_number() over(
+PARTITION BY company,location,industry,total_laid_off,percentage_laid_off, 'date' , stage,country,funds_raised_millions) AS row_num
+ from layoffs_staging
+ )
+ select * from 
+ duplicate_cte
+ WHERE row_num > 1;
+ 
+ select * from layoffs_staging 
+ WHERE company = 'Casper';
+ 
+ WITH duplicate_cte AS
+(
+select *,
+row_number() over(
+PARTITION BY company,location,industry,total_laid_off,percentage_laid_off, 'date' , stage,country,funds_raised_millions) AS row_num
+ from layoffs_staging
+ )
+ DELETE  from 
+ duplicate_cte
+ WHERE row_num > 1;  -- finding duplicates
+ 
+ 
+ CREATE TABLE `layoffs_staging2` (
+  `company` text,
+  `location` text,
+  `industry` text,
+  `total_laid_off` int DEFAULT NULL,
+  `percentage_laid_off` text,
+  `date` text,
+  `stage` text,
+  `country` text,
+  `funds_raised_millions` int DEFAULT NULL,
+  `row_num` int
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;  -- creating table for adding row_num column
+
+ select * from layoffs_staging2;       -- finding all columns details from the table
+ 
+ INSERT INTO layoffs_staging2
+ select *,
+row_number() over(
+PARTITION BY company,location,industry,total_laid_off,percentage_laid_off, 'date' , stage,country,funds_raised_millions) AS row_num
+ from layoffs_staging;                  -- details inserting into table layoffs_staging2  from table layoffs_staging
+ 
+ 
+  select * from layoffs_staging2
+  WHERE row_num > 1;                 -- selecting duplicates
+  
+   DELETE 
+   FROM layoffs_staging2
+  WHERE row_num > 1;                -- deleting duplicates
+  
+  SET SQL_SAFE_UPDATES = 0;
+  
+select * from layoffs_staging2;
+
+
+
+-- Standardizing data
+
+select distinct (company)
+from layoffs_staging2;
+
+SELECT distinct(trim(company))        -- removing space
+FROM layoffs_staging2;
+
+SELECT company,(trim(company))
+FROM layoffs_staging2;
+
+UPDATE layoffs_staging2
+set company = trim(company);        -- removing space and update 
+
+select distinct industry
+from layoffs_staging2
+order by 1;
+
+select *
+from layoffs_staging2
+where industry like 'crypto%' ;  -- finding all crypto industry details
+
+
+UPDATE layoffs_staging2
+SET industry = 'crypto'
+WHERE industry LIKE 'crypto%';   -- convert all crypto name to crypto
+
+select distinct industry         -- finding industry list
+from layoffs_staging2;
+
+select distinct location         -- finding location list
+from layoffs_staging2;
+
+select distinct location         -- finding location list
+from layoffs_staging2
+ORDER BY 1;
+
+select distinct country         -- finding country list
+from layoffs_staging2
+ORDER BY 1;
+
+select *        -- finding location list
+from layoffs_staging2
+WHERE country LIKE 'United States%'
+ORDER BY 1;
+
+select distinct country , trim(TRAILING ',' FROM country)        -- finding location list
+from layoffs_staging2
+ORDER BY 1;
+
+UPDATE layoffs_staging2
+SET country = trim(TRAILING '.' FROM country) 
+WHERE country LIKE 'United States%';
+
+-- changing data format
+SELECT `date` 
+FROM layoffs_staging2;
+
+select * from layoffs_staging2;
+
+SELECT `date`,
+str_to_date(`date` , '%m/%d/%Y') 
+FROM layoffs_staging2;              
+
+UPDATE layoffs_staging2 
+SET `date` = str_to_date(`date` , '%m/%d/%Y');   -- update the date format
+
+ALTER TABLE layoffs_staging2 
+MODIFY COLUMN `date` DATE;          -- modify the column name date to DATE
+
+-- changing laid off columns
+SELECT * 
+FROM layoffs_staging2 
+WHERE total_laid_off IS NULL 
+AND percentage_laid_off IS NULL;
+
+SELECT *
+FROM layoffs_staging2 
+WHERE industry IS NULL
+OR industry = '';
+
+SELECT *
+FROM layoffs_staging2 
+WHERE company = 'Airbnb';
+
+
+SELECT *
+FROM layoffs_staging2  t1
+JOIN layoffs_staging2 t2
+ON t1.company = t2.company
+WHERE (t1.industry IS NULL OR t1.industry = '')
+AND t2.industry IS NOT NULL;
+
+UPDATE layoffs_staging2 t1
+JOIN layoffs_staging2 t2
+ON t1.company = t2.company
+SET t1.industry = t2.industry
+WHERE (t1.industry IS NULL OR t1.industry = '')
+AND t2.industry IS NOT NULL;
+
+UPDATE layoffs_staging2
+SET industry = null
+WHERE industry = '';
+
+SELECT t1.industry , t2.industry
+FROM layoffs_staging2  t1
+JOIN layoffs_staging2 t2
+ON t1.company = t2.company
+WHERE (t1.industry IS NULL OR t1.industry = '')
+AND t2.industry IS NOT NULL;
+
+UPDATE layoffs_staging2 t1
+JOIN layoffs_staging2 t2
+ON t1.company = t2.company
+SET t1.industry = t2.industry
+WHERE t1.industry IS NULL 
+AND t2.industry IS NOT NULL;        -- updates the row with the null industry to use the industry value from matched row
+
+SELECT *
+FROM layoffs_staging2 
+WHERE company LIKE 'Bally%';        -- retrieve all records from the layoffs_staging2 table where the company name begins with"Bally"
+
+-- changing laid off columns
+SELECT * 
+FROM layoffs_staging2 
+WHERE total_laid_off IS NULL 
+AND percentage_laid_off IS NULL;         -- 
+
+DELETE
+FROM layoffs_staging2 
+WHERE total_laid_off IS NULL 
+AND percentage_laid_off IS NULL;         -- deleting null details from both tables
+
+select * from layoffs_staging2;
+
+ALTER TABLE layoffs_staging2
+DROP COLUMN row_num;                  -- dropping column row_num
+
+
+select * from layoffs_staging2;
